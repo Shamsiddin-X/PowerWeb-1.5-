@@ -1,29 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MousePointerClick, Scan } from 'lucide-react';
-import { EditorState, CanvasElement, Action } from '../../types';
+import { Action } from '../../types';
 import { RibbonGroup, BigButton } from './RibbonShared';
 import { t } from '../../utils/localization';
+import { useEditorStore } from '../../store/useEditorStore';
+import { useSelectedElement } from '../../store/selectors';
 
-interface RibbonLogicProps {
-  editorState: EditorState;
-  selectedElement: CanvasElement;
-  activeEventType: 'click' | 'hover';
-  setActiveEventType: (type: 'click' | 'hover') => void;
-  onUpdateLogic: (actionType: string, targetIdOrUrl?: string) => void;
-}
+export const RibbonLogic = React.memo(() => {
+  const { language, project, updateElementProp } = useEditorStore();
+  const selectedElement = useSelectedElement();
+  const [activeEventType, setActiveEventType] = useState<'click' | 'hover'>('click');
 
-export const RibbonLogic = React.memo(({
-  editorState,
-  selectedElement,
-  activeEventType,
-  setActiveEventType,
-  onUpdateLogic,
-}: RibbonLogicProps) => {
-  const { language } = editorState;
+  if (!selectedElement) return null;
 
   const activeBlock = selectedElement.logic?.find(b => b.event?.type === activeEventType);
   const currentLogicAction = activeBlock?.actions?.[0];
   const currentActionType = currentLogicAction?.type || 'none';
+
+  const handleUpdateLogic = (newActionType: string, targetIdOrUrl?: string) => {
+    const other = (selectedElement.logic || []).filter(b => b.event?.type !== activeEventType);
+    let finalLogic = other;
+    
+    if (newActionType !== 'none') {
+      const action: Action = { type: newActionType as any };
+      if (newActionType === 'navigateToPage') {
+        if (targetIdOrUrl) {
+          action.targetId = targetIdOrUrl;
+        } else {
+          const pages = project.pages;
+          const idx = pages.findIndex(p => p.id === project.activePageId);
+          action.targetId = pages[(idx + 1) % pages.length].id;
+        }
+      } else if (newActionType === 'navigateToUrl') {
+        action.url = targetIdOrUrl || '';
+      } else if (newActionType === 'showModal') {
+        action.targetId = targetIdOrUrl || '';
+      }
+      finalLogic = [...other, { event: { type: activeEventType }, actions: [action] }];
+    }
+    updateElementProp('logic', finalLogic);
+  };
 
   return (
     <>
@@ -47,7 +63,7 @@ export const RibbonLogic = React.memo(({
           <select
             className="text-xs border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded p-1"
             value={currentActionType}
-            onChange={(e) => onUpdateLogic(e.target.value)}
+            onChange={(e) => handleUpdateLogic(e.target.value)}
           >
             <option value="none">{t('No Action', language)}</option>
             <option value="navigateToPage">{t('Go to Page', language)}</option>
@@ -59,9 +75,9 @@ export const RibbonLogic = React.memo(({
             <select
               className="text-xs border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded p-1"
               value={currentLogicAction?.targetId || ''}
-              onChange={(e) => onUpdateLogic('navigateToPage', e.target.value)}
+              onChange={(e) => handleUpdateLogic('navigateToPage', e.target.value)}
             >
-              {editorState.project.pages.map((p, idx) => (
+              {project.pages.map((p, idx) => (
                 <option key={p.id} value={p.id}>{idx + 1}. {p.name}</option>
               ))}
             </select>
@@ -71,7 +87,7 @@ export const RibbonLogic = React.memo(({
               placeholder="https://example.com"
               className="text-xs border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded p-1"
               value={currentLogicAction?.url || ''}
-              onChange={(e) => onUpdateLogic('navigateToUrl', e.target.value)}
+              onChange={(e) => handleUpdateLogic('navigateToUrl', e.target.value)}
             />
           ) : currentActionType === 'showModal' ? (
             <input
@@ -79,7 +95,7 @@ export const RibbonLogic = React.memo(({
               placeholder="Modal Element ID"
               className="text-xs border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded p-1"
               value={currentLogicAction?.targetId || ''}
-              onChange={(e) => onUpdateLogic('showModal', e.target.value)}
+              onChange={(e) => handleUpdateLogic('showModal', e.target.value)}
             />
           ) : (
             <div className="h-6" />

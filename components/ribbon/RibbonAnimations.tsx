@@ -1,21 +1,18 @@
 import React from 'react';
-import { ANIMATION_PRESETS, Animation, AnimationEasing, CanvasElement, EditorState } from '../../types';
+import { ANIMATION_PRESETS, Animation, AnimationEasing } from '../../types';
 import { RibbonGroup } from './RibbonShared';
-import { generateId } from '../../utils';
+import { generateId } from '../../store/helpers';
+import { useEditorStore } from '../../store/useEditorStore';
+import { useSelectedElement } from '../../store/selectors';
 
-interface RibbonAnimationsProps {
-  editorState: EditorState;
-  selectedElement: CanvasElement;
-  onUpdateElement: (key: string, value: any, isStyle?: boolean) => void;
-}
-
-export const RibbonAnimations = React.memo(({
-  editorState,
-  selectedElement,
-  onUpdateElement,
-}: RibbonAnimationsProps) => {
-  const elementAnims = selectedElement.animations || [];
+export const RibbonAnimations = React.memo(() => {
+  const { updateElementProp } = useEditorStore();
+  const selectedElement = useSelectedElement();
   const [aCategory, setACategory] = React.useState<string>('Entrance');
+
+  if (!selectedElement) return null;
+
+  const elementAnims = selectedElement.animations || [];
 
   const addAnimation = (key: string) => {
     const newAnim: Animation = {
@@ -27,15 +24,15 @@ export const RibbonAnimations = React.memo(({
       easing: 'ease-out',
       iterationCount: 1,
     };
-    onUpdateElement('animations', [...elementAnims, newAnim]);
+    updateElementProp('animations', [...elementAnims, newAnim]);
   };
 
   const removeAnimation = (id: string) => {
-    onUpdateElement('animations', elementAnims.filter(a => a.id !== id));
+    updateElementProp('animations', elementAnims.filter(a => a.id !== id));
   };
 
   const updateAnimField = (id: string, field: keyof Animation, value: any) => {
-    onUpdateElement('animations', elementAnims.map(a => a.id === id ? { ...a, [field]: value } : a));
+    updateElementProp('animations', elementAnims.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
   const previewAnimation = (anim: Animation) => {

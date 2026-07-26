@@ -1,23 +1,36 @@
-import React from 'react';
-import { EditorState } from '../../types';
+import React, { useEffect, useState } from 'react';
 import { RibbonGroup, BigButton } from './RibbonShared';
 import { t } from '../../utils/localization';
 import { Grid, Zap, FolderOpen } from 'lucide-react';
-import { Plugin } from '../../utils/pluginSystem';
+import { Plugin, loadPlugins } from '../../services/pluginService';
+import { useEditorStore } from '../../store/useEditorStore';
 
-interface RibbonPluginsProps {
-  editorState: EditorState;
-  plugins: Plugin[];
-  onRunPlugin: (plugin: Plugin) => void;
-  onOpenPluginsFolder: () => void;
-}
+export const RibbonPlugins = React.memo(() => {
+  const { language, runPlugin } = useEditorStore();
+  const [plugins, setPlugins] = useState<Plugin[]>([]);
 
-export const RibbonPlugins = React.memo(({
-  editorState,
-  plugins,
-  onRunPlugin,
-  onOpenPluginsFolder,
-}: RibbonPluginsProps) => {
+  useEffect(() => {
+    let mounted = true;
+    loadPlugins().then(loaded => {
+      if (mounted) setPlugins(loaded);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const handleOpenPluginsFolder = async () => {
+    try {
+      const isTauri = typeof window !== 'undefined' && ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
+      if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('open_plugins_folder');
+      } else {
+        alert('Plugins folder is only available in the desktop version.');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <>
       <RibbonGroup label="Active Plugins">
@@ -28,13 +41,13 @@ export const RibbonPlugins = React.memo(({
               key={plugin.name}
               icon={Zap}
               label={plugin.name.replace('.js', '')}
-              onClick={() => onRunPlugin(plugin)}
+              onClick={() => runPlugin(plugin)}
             />
           ))}
         </div>
       </RibbonGroup>
       <RibbonGroup label="Manage">
-        <BigButton icon={FolderOpen} label="Plugin Folder" onClick={onOpenPluginsFolder} />
+        <BigButton icon={FolderOpen} label="Plugin Folder" onClick={handleOpenPluginsFolder} />
       </RibbonGroup>
     </>
   );
