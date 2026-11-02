@@ -145,7 +145,10 @@ async fn export_zip(
 }
 
 #[derive(serde::Serialize)]
-struct ProjectArchiveEntry { path: String, data: String }
+struct ProjectArchiveEntry {
+    path: String,
+    data: String,
+}
 
 fn encode_base64(bytes: &[u8]) -> String {
     const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -156,8 +159,16 @@ fn encode_base64(bytes: &[u8]) -> String {
         let c = chunk.get(2).copied().unwrap_or(0) as usize;
         result.push(TABLE[a >> 2] as char);
         result.push(TABLE[((a & 3) << 4) | (b >> 4)] as char);
-        result.push(if chunk.len() > 1 { TABLE[((b & 15) << 2) | (c >> 6)] as char } else { '=' });
-        result.push(if chunk.len() > 2 { TABLE[c & 63] as char } else { '=' });
+        result.push(if chunk.len() > 1 {
+            TABLE[((b & 15) << 2) | (c >> 6)] as char
+        } else {
+            '='
+        });
+        result.push(if chunk.len() > 2 {
+            TABLE[c & 63] as char
+        } else {
+            '='
+        });
     }
     result
 }
@@ -167,22 +178,41 @@ fn read_project_archive(path: String) -> Result<Vec<ProjectArchiveEntry>, String
     use std::io::Read;
     let file = fs::File::open(path).map_err(|error| error.to_string())?;
     let mut zip = zip::ZipArchive::new(file).map_err(|error| error.to_string())?;
-    if zip.len() > 20000 { return Err("Слишком много файлов в PWB".into()); }
+    if zip.len() > 20000 {
+        return Err("Слишком много файлов в PWB".into());
+    }
     let mut result = Vec::new();
     let mut paths = std::collections::HashSet::new();
     let mut total: u64 = 0;
     for index in 0..zip.len() {
         let mut entry = zip.by_index(index).map_err(|error| error.to_string())?;
-        if entry.enclosed_name().is_none() { return Err("Недопустимый путь в PWB".into()); }
-        total = total.checked_add(entry.size()).ok_or("Некорректный размер PWB")?;
-        if total > 1024 * 1024 * 1024 { return Err("Распакованный PWB превышает 1 ГБ".into()); }
+        if entry.enclosed_name().is_none() {
+            return Err("Недопустимый путь в PWB".into());
+        }
+        total = total
+            .checked_add(entry.size())
+            .ok_or("Некорректный размер PWB")?;
+        if total > 1024 * 1024 * 1024 {
+            return Err("Распакованный PWB превышает 1 ГБ".into());
+        }
         let path = entry.name().to_string();
-        if path.contains('\\') || !paths.insert(path.clone()) { return Err("Недопустимый или повторяющийся путь в PWB".into()); }
+        if path.contains('\\') || !paths.insert(path.clone()) {
+            return Err("Недопустимый или повторяющийся путь в PWB".into());
+        }
         let size = entry.size();
         let mut bytes = Vec::new();
-        entry.by_ref().take(size + 1).read_to_end(&mut bytes).map_err(|error| error.to_string())?;
-        if bytes.len() as u64 != size { return Err("Повреждённый ресурс PWB".into()); }
-        result.push(ProjectArchiveEntry { path, data: encode_base64(&bytes) });
+        entry
+            .by_ref()
+            .take(size + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|error| error.to_string())?;
+        if bytes.len() as u64 != size {
+            return Err("Повреждённый ресурс PWB".into());
+        }
+        result.push(ProjectArchiveEntry {
+            path,
+            data: encode_base64(&bytes),
+        });
     }
     Ok(result)
 }

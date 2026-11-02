@@ -16,7 +16,7 @@ export function optimizeExport(tree:ExportTree):OptimizedExport {
   }));
   const visit=(item:ExportNode):ExportNode=>{
     if(item.styles.fontFamily)String(item.styles.fontFamily).split(',').forEach(family=>families.add(family.trim().replace(/^['"]|['"]$/g,'')));
-    const children=item.children.flatMap(child=>{
+    const children=item.children.flatMap<string | ExportNode>(child=>{
       if(typeof child==='string')return child?[child]:[];
       if(child.attributes['data-layer']!==undefined&&!child.children.length){report.removedEmptyLayers++;return [];}
       return [visit(child)];

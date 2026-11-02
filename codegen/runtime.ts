@@ -38,7 +38,7 @@ export function generateTreeRuntime(output:OptimizedExport):string{
 export function generateRuntime(project:Project):string{return generateTreeRuntime(optimizeExport(buildExportTree(project)));}
 
 /** Backwards-compatible mounting entry for existing integrations, not used by static exports. */
-export function startRuntime(entries:any[],root:ParentNode=document,renderShader?:any){
+export function startRuntime(entries:any[],root:Document | Element | DocumentFragment=document,renderShader?:any){
   const dispose:(()=>void)[]=[];
   dispose.push(startLogicLegacy(entries,root,{}));
   dispose.push(startClickAnimationsLegacy(root));

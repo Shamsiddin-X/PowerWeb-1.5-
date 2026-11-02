@@ -1,4 +1,5 @@
 /** Optional behavior. Static content and ordinary links do not call this module. */
+/** @param {Document | Element | DocumentFragment} root */
 export function startLogic(entries, root = document, pageUrls = {}) {
   const removers = [];
   const variables = Object.create(null);

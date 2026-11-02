@@ -1,10 +1,47 @@
 import { build } from 'esbuild';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-const dir = await mkdtemp(join(process.cwd(), 'tests', '.run-'));
-try {
-  await build({ entryPoints: ['tests/regression.test.ts'], bundle: true, packages: 'external', platform: 'node', format: 'esm', outfile: join(dir, 'suite.mjs') });
-  const child = spawn(process.execPath, [join(dir, 'suite.mjs')], { stdio: 'inherit' });
-  process.exitCode = await new Promise(resolve => child.on('exit', code => resolve(code ?? 1)));
-} finally { await rm(dir, { recursive: true, force: true }); }
+import { rawTextPlugin } from './support/raw-text.mjs';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+const testsDirectory = join(root, 'tests');
+const available = (await readdir(testsDirectory))
+  .filter((name) => name.endsWith('.test.ts'))
+  .sort();
+const requested = process.argv.slice(2);
+const suites = requested.length ? requested.map((name) => `${name}.test.ts`) : available;
+const unknown = suites.filter((name) => !available.includes(name));
+if (unknown.length) {
+  console.error(
+    `Unknown test suite: ${unknown.join(', ')}. Available: ${available.map((name) => basename(name, '.test.ts')).join(', ')}`,
+  );
+  process.exitCode = 1;
+} else {
+  const directory = await mkdtemp(join(testsDirectory, '.run-'));
+  try {
+    const outputs = [];
+    for (const suite of [...new Set(suites)]) {
+      const outfile = join(directory, suite.replace(/\.ts$/, '.mjs'));
+      await build({
+        absWorkingDir: root,
+        entryPoints: [join(testsDirectory, suite)],
+        bundle: true,
+        packages: 'external',
+        platform: 'node',
+        format: 'esm',
+        outfile,
+        plugins: [rawTextPlugin()],
+      });
+      outputs.push(outfile);
+    }
+    const child = spawn(process.execPath, ['--test', ...outputs], { cwd: root, stdio: 'inherit' });
+    process.exitCode = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', (code) => resolve(code ?? 1));
+    });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}

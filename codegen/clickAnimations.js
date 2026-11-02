@@ -1,4 +1,5 @@
 /** Shared animation lifecycle. The legacy export name is retained for saved integrations. */
+/** @param {Document | Element | DocumentFragment} root */
 export function startClickAnimations(root = document, { editor = false } = {}) {
   const removers = [], running = [];
   const elements = editor ? [root] : [...(root.matches?.('[data-animations]') ? [root] : []), ...root.querySelectorAll('[data-animations]')];
