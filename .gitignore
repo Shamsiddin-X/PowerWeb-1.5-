@@ -1,0 +1,24 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+tests/.run-*/
+tests/.preview-*/
+tests/.rendering-*/
+*.log
+/build_output.txt
+/npm_ci_out.txt
+/npm_install_output.txt
+.env
+.env.*
+!.env.example
+
+# Local tools and operating system files
+/.agents/
+/.codex/
+/.aws/
+.DS_Store
+Thumbs.db
+
+# Generated visual review sheet
+design-preview.html

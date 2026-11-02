@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, Type } from 'lucide-react';
+import { useEditorStore } from '../store/useEditorStore';
+import { pickProjectFont } from '../services/fontService';
 import { useSystemFonts } from '../utils/useSystemFonts';
 
 interface FontPickerProps {
@@ -9,7 +11,11 @@ interface FontPickerProps {
 }
 
 export const FontPicker: React.FC<FontPickerProps> = ({ value, onChange }) => {
-  const { fonts, loading } = useSystemFonts();
+  const { fonts:systemFonts, loading } = useSystemFonts();
+  const projectFonts=useEditorStore(state=>state.project.fonts);
+  const fonts=[...new Set([...(projectFonts||[]).map(font=>font.family),...systemFonts])];
+  const [importing,setImporting]=useState(false),[fontError,setFontError]=useState('');
+  const importFont=async()=>{if(importing)return;const projectId=useEditorStore.getState().project.id;setImporting(true);setFontError('');try{const font=await pickProjectFont();if(font&&useEditorStore.getState().project.id===projectId){const state=useEditorStore.getState();state.commitTransaction();state.addProjectFont(font);onChange(font.family);}}catch(error){setFontError(error instanceof Error?error.message:String(error));}finally{setImporting(false);}};
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const [search, setSearch] = useState('');
@@ -73,6 +79,8 @@ export const FontPicker: React.FC<FontPickerProps> = ({ value, onChange }) => {
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <button type="button" disabled={importing} onClick={()=>void importFont()} className="text-[10px] text-brand-600 dark:text-brand-400 mb-1 flex items-center gap-1">{importing?'Загрузка шрифта…':'+ Добавить шрифт из файла'}</button>
+      {fontError&&<p role="alert" className="text-[10px] text-red-500 mb-1">{fontError}</p>}
       {/* Trigger Button */}
       <button
         onClick={() => {

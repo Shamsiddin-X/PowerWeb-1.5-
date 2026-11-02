@@ -11,6 +11,7 @@ export type ElementType =
   | 'group';
 
 export interface ElementStyle {
+  objectFit?: 'fill' | 'contain' | 'cover';
   fill: string;
   stroke: string;
   strokeWidth: number;
@@ -28,6 +29,7 @@ export interface ElementStyle {
 }
 
 export interface CanvasElement {
+  shader?: import('./shaders').ShaderConfig | null;
   id: string;
   type: ElementType;
   x: number;

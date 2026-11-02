@@ -1,39 +1,12 @@
-// services/pluginService.ts — Plugin loading and safe execution
-
-export interface Plugin {
-  name: string;
-  code: string;
-}
-
-const isTauri = (): boolean =>
-  typeof window !== 'undefined' &&
-  ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
-
+import { isTauri } from './platform';
+export interface Plugin { name: string; code: string; }
 export async function loadPlugins(): Promise<Plugin[]> {
   if (!isTauri()) return [];
-  try {
-    const { readDir, readTextFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-    const entries = await readDir('plugins', { baseDir: BaseDirectory.Resource });
-    const plugins: Plugin[] = [];
-    for (const entry of entries) {
-      if (entry.isFile && entry.name?.endsWith('.js')) {
-        const code = await readTextFile(`plugins/${entry.name}`, { baseDir: BaseDirectory.Resource });
-        plugins.push({ name: entry.name, code });
-      }
-    }
-    return plugins;
-  } catch (e) {
-    console.error('Failed to load plugins:', e);
-    return [];
-  }
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke<Plugin[]>('load_plugins');
 }
-
-export function executePlugin(plugin: Plugin, api: Record<string, unknown>): void {
-  try {
-    const fn = new Function('PowerWeb', plugin.code);
-    fn(api);
-    console.log(`[Plugin: ${plugin.name}] Executed successfully.`);
-  } catch (e) {
-    console.error(`[Plugin: ${plugin.name}] Error:`, e);
-  }
+/** Local plugins are trusted code, not a security sandbox. Only explicit user activation runs them. */
+export async function executePlugin(plugin: Plugin, api: Record<string, unknown>): Promise<void> {
+  const fn = new Function('PowerWeb', plugin.code);
+  await fn(api);
 }

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { RibbonGroup, BigButton } from './RibbonShared';
 import { t } from '../../utils/localization';
-import { Grid, Zap, FolderOpen } from 'lucide-react';
+import { Grid, Zap, FolderOpen, RefreshCw } from 'lucide-react';
 import { Plugin, loadPlugins } from '../../services/pluginService';
+import { reportError } from '../../services/editorCommands';
 import { useEditorStore } from '../../store/useEditorStore';
 
 export const RibbonPlugins = React.memo(() => {
@@ -13,7 +14,7 @@ export const RibbonPlugins = React.memo(() => {
     let mounted = true;
     loadPlugins().then(loaded => {
       if (mounted) setPlugins(loaded);
-    });
+    }).catch(reportError);
     return () => { mounted = false; };
   }, []);
 
@@ -34,19 +35,20 @@ export const RibbonPlugins = React.memo(() => {
   return (
     <>
       <RibbonGroup label="Active Plugins">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {plugins.length === 0 && <span className="text-[10px] text-gray-400 px-4">No plugins found</span>}
           {plugins.map(plugin => (
             <BigButton
               key={plugin.name}
               icon={Zap}
               label={plugin.name.replace('.js', '')}
-              onClick={() => runPlugin(plugin)}
+              onClick={() => { void runPlugin(plugin).catch(reportError); }}
             />
           ))}
         </div>
       </RibbonGroup>
       <RibbonGroup label="Manage">
+        <BigButton icon={RefreshCw} label="Reload" onClick={() => { void loadPlugins().then(setPlugins).catch(reportError); }} />
         <BigButton icon={FolderOpen} label="Plugin Folder" onClick={handleOpenPluginsFolder} />
       </RibbonGroup>
     </>

@@ -1,3 +1,4 @@
+import { Slider } from './ui/Slider';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 
@@ -69,7 +70,7 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
   const handleMouseDown = (e: React.MouseEvent, id: string) => {
       e.stopPropagation();
       setActiveStopId(id);
-      
+
       const slider = sliderRef.current;
       if (!slider) return;
 
@@ -81,7 +82,7 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
           const deltaX = moveEvent.clientX - startX;
           const deltaPercent = (deltaX / width) * 100;
           let newOffset = Math.max(0, Math.min(100, startOffset + deltaPercent));
-          
+
           setStops(prev => prev.map(s => s.id === id ? { ...s, offset: newOffset } : s));
       };
 
@@ -96,7 +97,7 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-[400px] border border-gray-200 dark:border-slate-700 p-4 animate-in fade-in zoom-in-95 duration-200">
+        <div role="dialog" aria-modal="true" aria-label="Gradient Editor" className="bg-white dark:bg-slate-900 rounded-lg shadow-2xl w-[400px] border border-gray-200 dark:border-slate-700 p-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100">Gradient Editor</h3>
                 <button onClick={onClose} className="text-gray-500 hover:text-red-500"><X size={16}/></button>
@@ -105,7 +106,7 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
             <div className="flex gap-4 mb-4">
                 <div className="flex-1">
                     <div className="text-xs text-gray-500 mb-1">Preview</div>
-                    <div 
+                    <div
                         className="w-full h-24 rounded border border-gray-300 dark:border-slate-600 checkerboard-bg"
                         style={{ backgroundImage: generateCSS() }}
                     />
@@ -121,7 +122,7 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
                     </div>
                 </div>
                 {/* Slider Track */}
-                <div 
+                <div
                     ref={sliderRef}
                     className="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded relative cursor-pointer"
                     onClick={(e) => {
@@ -132,8 +133,8 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
                          <div
                             key={stop.id}
                             onMouseDown={(e) => handleMouseDown(e, stop.id)}
-                            style={{ 
-                                left: `${stop.offset}%`, 
+                            style={{
+                                left: `${stop.offset}%`,
                                 backgroundColor: stop.color,
                                 border: stop.id === activeStopId ? '2px solid white' : '2px solid white',
                                 boxShadow: stop.id === activeStopId ? '0 0 0 2px #3b82f6, 0 2px 4px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.2)'
@@ -149,14 +150,14 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
                 <div>
                     <label className="text-xs font-bold text-gray-600 dark:text-slate-400 block mb-1">Color</label>
                     <div className="flex gap-2">
-                        <input 
-                            type="color" 
+                        <input
+                            type="color"
                             value={activeStop.color}
                             onChange={(e) => updateStop(activeStop.id, { color: e.target.value })}
                             className="h-8 w-10 p-0 border-0 rounded cursor-pointer"
                         />
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             value={activeStop.color}
                             onChange={(e) => updateStop(activeStop.id, { color: e.target.value })}
                             className="flex-1 text-xs border border-gray-300 dark:border-slate-600 rounded px-1 bg-white dark:bg-slate-900"
@@ -165,28 +166,26 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
                 </div>
                 <div>
                     <label className="text-xs font-bold text-gray-600 dark:text-slate-400 block mb-1">Position: {Math.round(activeStop.offset)}%</label>
-                    <input 
-                        type="range" min="0" max="100" 
+                    <Slider aria-label="Position" min={0} max={100}
                         value={activeStop.offset}
                         onChange={(e) => updateStop(activeStop.id, { offset: parseInt(e.target.value) })}
-                        className="w-full accent-brand-600 h-1.5 bg-gray-200 rounded-lg appearance-none"
+                        className="w-full"
                     />
                 </div>
                  <div className="col-span-2">
                     <label className="text-xs font-bold text-gray-600 dark:text-slate-400 block mb-1">Opacity: {Math.round(activeStop.opacity * 100)}%</label>
-                    <input 
-                        type="range" min="0" max="1" step="0.01"
+                    <Slider aria-label="Opacity" min={0} max={1} step={0.01}
                         value={activeStop.opacity}
                         onChange={(e) => updateStop(activeStop.id, { opacity: parseFloat(e.target.value) })}
-                        className="w-full accent-brand-600 h-1.5 bg-gray-200 rounded-lg appearance-none"
+                        className="w-full"
                     />
                 </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4 mb-4">
                  <div>
                     <label className="text-xs font-bold text-gray-600 dark:text-slate-400 block mb-1">Type</label>
-                    <select 
+                    <select
                         value={type} onChange={(e) => setType(e.target.value as any)}
                         className="w-full text-xs border border-gray-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
                     >
@@ -197,11 +196,10 @@ export const GradientEditor: React.FC<GradientEditorProps> = ({ initialValue, on
                 {type === 'linear' && (
                     <div>
                         <label className="text-xs font-bold text-gray-600 dark:text-slate-400 block mb-1">Angle: {angle}°</label>
-                        <input 
-                            type="range" min="0" max="360"
+                        <Slider aria-label="Angle" min={0} max={360}
                             value={angle}
                             onChange={(e) => setAngle(parseInt(e.target.value))}
-                            className="w-full accent-brand-600 h-1.5 bg-gray-200 rounded-lg appearance-none"
+                            className="w-full"
                         />
                     </div>
                 )}

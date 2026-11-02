@@ -1,169 +1,77 @@
-// services/fileService.ts — Platform-agnostic file I/O (Tauri vs Web)
-
 import { Project } from '../types';
 import { PowerWebCodeGenerator } from '../codegen/htmlCssJsGenerator';
-
-const isTauri = (): boolean =>
-  typeof window !== 'undefined' &&
-  ((window as any).__TAURI_INTERNALS__ !== undefined || (window as any).__TAURI__ !== undefined);
-
-// ─── Dynamic Tauri imports (only in desktop) ─────────────────────────────────
-
-async function tauriDialog() {
-  return import('@tauri-apps/plugin-dialog');
+import { isTauri } from './platform';
+import { createPwbContainer, readPwbContainer, readPwbEntries } from './projectContainer/container';
+import { rememberPreview } from './projectContainer/cache';
+import { createExportPackage } from './exportService';
+import { safeName } from './projectContainer/assets';
+import { preparePreviewResources } from './previewResources';
+const dialog=()=>import('@tauri-apps/plugin-dialog');
+const fs=()=>import('@tauri-apps/plugin-fs');
+const core=()=>import('@tauri-apps/api/core');
+function download(bytes:Uint8Array,name:string,type:string){
+  const url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type}));
+  const anchor=document.createElement('a');anchor.href=url;anchor.download=name;document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
-async function tauriFs() {
-  return import('@tauri-apps/plugin-fs');
+async function destination(name:string,extension:string):Promise<string|null|undefined>{
+  if(!isTauri())return undefined;
+  const {save}=await dialog();return save({defaultPath:name,filters:[{name:extension==='pwb'?'PowerWeb Project':'ZIP Archive',extensions:[extension]}]});
 }
-async function tauriCore() {
-  return import('@tauri-apps/api/core');
+async function write(bytes:Uint8Array,path:string|undefined,name:string,type:string){
+  if(path){const {writeFile}=await fs();await writeFile(path,bytes);}else download(bytes,name,type);
 }
-
-// ─── Save Project ─────────────────────────────────────────────────────────────
-
-export async function saveProject(project: Project): Promise<void> {
-  const fileData = {
-    signature: 'POWERWEB_PROJECT',
-    version: '1.5.0',
-    savedAt: Date.now(),
-    project,
-  };
-  const json = JSON.stringify(fileData, null, 2);
-
-  if (isTauri()) {
-    const { save } = await tauriDialog();
-    const { writeTextFile } = await tauriFs();
-    const path = await save({
-      filters: [{ name: 'PowerWeb Project', extensions: ['pwb'] }],
-      defaultPath: `${project.name}.pwb`,
-    });
-    if (path) await writeTextFile(path, json);
-  } else {
-    downloadBlob(json, `${project.name}.pwb`, 'application/json');
+export async function saveProject(project:Project):Promise<boolean>{
+  const name=safeName(project.name,'project')+'.pwb',path=await destination(name,'pwb');if(path===null)return false;
+  const container=await createPwbContainer(project);await write(container.bytes,path,name,'application/zip');rememberPreview(project,container.preview);return true;
+}
+async function browserFile():Promise<File|null>{
+  return new Promise((resolve,reject)=>{
+    const input=document.createElement('input');input.type='file';input.accept='.pwb';input.hidden=true;
+    const finish=(file:File|null)=>{input.remove();resolve(file);};input.oncancel=()=>finish(null);input.onchange=()=>finish(input.files?.[0]||null);document.body.appendChild(input);
+    try{input.click();}catch(error){input.remove();reject(error);}
+  });
+}
+export async function readProjectFile(path:string):Promise<Project>{
+  const {readFile}=await fs(),bytes=await readFile(path);
+  try{const result=await readPwbContainer(bytes);rememberPreview(result.project,result.preview);return result.project;}
+  catch(error){
+    // Older Linux WebViews may not implement DecompressionStream(deflate-raw).
+    if(!(error instanceof Error)||!error.message.includes('WebView'))throw error;
+    const {invoke}=await core();
+    const entries=await invoke<{path:string;data:string}[]>('read_project_archive',{path});
+    const files=new Map(entries.map(entry=>[entry.path,Uint8Array.from(atob(entry.data),c=>c.charCodeAt(0))]));
+    const result=await readPwbEntries(files);rememberPreview(result.project,result.preview);return result.project;
   }
 }
-
-// ─── Open Project ─────────────────────────────────────────────────────────────
-
-export async function openProject(): Promise<Project | null> {
-  if (isTauri()) {
-    const { open } = await tauriDialog();
-    const { readTextFile } = await tauriFs();
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: 'PowerWeb Project', extensions: ['pwb'] }],
-    });
-    if (!selected || typeof selected !== 'string') return null;
-    const content = await readTextFile(selected);
-    return parsePWB(content);
-  } else {
-    return new Promise(resolve => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.pwb';
-      input.onchange = (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return resolve(null);
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve(parsePWB(ev.target?.result as string));
-        reader.readAsText(file);
-      };
-      input.click();
-    });
+export async function openProject():Promise<Project|null>{
+  if(isTauri()){
+    const {open}=await dialog();const path=await open({multiple:false,filters:[{name:'PowerWeb Project',extensions:['pwb']}]});
+    return typeof path==='string'?readProjectFile(path):null;
   }
+  const file=await browserFile();if(!file)return null;
+  const result=await readPwbContainer(new Uint8Array(await file.arrayBuffer()));rememberPreview(result.project,result.preview);return result.project;
 }
-
-function parsePWB(content: string): Project | null {
-  try {
-    const data = JSON.parse(content);
-    if (data.signature === 'POWERWEB_PROJECT' && data.project) {
-      return data.project as Project;
-    }
-    return null;
-  } catch {
-    alert('Failed to parse project file. It may be corrupted.');
-    return null;
-  }
+export async function exportProject(project:Project):Promise<void>{
+  const name=safeName(project.name,'website')+'.zip',path=await destination(name,'zip');if(path===null)return;
+  const bundle=await createExportPackage(project,'html');await write(bundle.bytes,path,name,'application/zip');
 }
-
-// ─── Export ZIP / HTML ────────────────────────────────────────────────────────
-
-export async function exportProject(project: Project): Promise<void> {
-  const generator = new PowerWebCodeGenerator(project);
-  const { html, css, js } = generator.generate();
-
-  if (isTauri()) {
-    const { save } = await tauriDialog();
-    const { invoke } = await tauriCore();
-    const savePath = await save({
-      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
-      defaultPath: `${project.name.replace(/\s+/g, '_')}.zip`,
-    });
-    if (!savePath) return;
-    await invoke('export_zip', { savePath, html, css: css || '', js: js || '', projectName: project.name });
-  } else {
-    const fullHtml = buildFullHtml(project.name, html, css || '', js || '');
-    downloadBlob(fullHtml, `${project.name.replace(/\s+/g, '_')}.html`, 'text/html');
-  }
+export async function exportReactProject(project:Project):Promise<void>{
+  const name=safeName(project.name,'website')+'-react.zip',path=await destination(name,'zip');if(path===null)return;
+  const bundle=await createExportPackage(project,'react');await write(bundle.bytes,path,name,'application/zip');
 }
-
-// ─── Preview ──────────────────────────────────────────────────────────────────
-
-export async function previewProject(project: Project): Promise<void> {
-  const generator = new PowerWebCodeGenerator(project);
-  const { html, css, js } = generator.generate();
-
-  if (isTauri()) {
-    const { invoke } = await tauriCore();
-    const fullHtml = buildFullHtml(project.name, html, css || '', js || '');
-    await invoke('preview_html', { html: fullHtml });
-  } else {
-    const fullHtml = buildFullHtml(project.name, html, css || '', js || '');
-    const newWindow = window.open();
-    if (newWindow) {
-      newWindow.document.write(fullHtml);
-      newWindow.document.close();
-    } else {
-      alert('Popup blocked. Please allow popups for preview.');
-    }
-  }
+export async function previewProject(project:Project):Promise<void>{
+  // Reserve the browser window during the click, before embedding temporary media.
+  const native=isTauri(),popup=native?null:window.open();
+  if(!native&&!popup)throw new Error('Разрешите открытие окна предпросмотра.');
+  if(popup)popup.opener=null;
+  try{
+    const snapshot=await preparePreviewResources(project);
+    const {html}=new PowerWebCodeGenerator(snapshot,{layout:'canvas'}).generate();
+    if(native){const {invoke}=await core();await invoke('preview_html',{html});}
+    else{popup!.document.write(html);popup!.document.close();}
+  }catch(error){popup?.close();throw error;}
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function buildFullHtml(name: string, htmlBody: string, css: string, js: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${name}</title>
-  <style>${css}</style>
-</head>
-<body>
-${htmlBody}
-<script>${js}</script>
-</body>
-</html>`;
-}
-
-function downloadBlob(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ─── Open Plugins Folder ──────────────────────────────────────────────────────
-
-export async function openPluginsFolder(): Promise<void> {
-  if (isTauri()) {
-    const { invoke } = await tauriCore();
-    await invoke('open_plugins_folder');
-  } else {
-    alert('Plugin folder is only available in the desktop version.');
-  }
+export async function openPluginsFolder():Promise<void>{
+  if(isTauri()){const {invoke}=await core();await invoke('open_plugins_folder');}
+  else throw new Error('Папка плагинов доступна в настольной версии.');
 }

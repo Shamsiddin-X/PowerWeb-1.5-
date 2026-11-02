@@ -103,16 +103,23 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ onChange, onOpenGradie
          )}
 
         <button 
-            onClick={() => {}}
-            className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded w-full text-left opacity-50 cursor-not-allowed"
+            onClick={() => {
+              const value = prompt('Цвет CSS (#hex, rgb, rgba):', currentColor);
+              if (value && CSS.supports('color', value)) onChange(value);
+            }}
+            className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded w-full text-left"
         >
             <Droplets size={14} />
             <span>More Colors...</span>
         </button>
 
         <button 
-             onClick={() => {}}
-             className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded w-full text-left opacity-50 cursor-not-allowed"
+             onClick={async () => {
+               const EyeDropper = (window as any).EyeDropper;
+               if (!EyeDropper) { alert('Пипетка недоступна в этом браузере. Используйте ввод цвета.'); return; }
+               try { const result = await new EyeDropper().open(); onChange(result.sRGBHex); } catch {}
+             }}
+             className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded w-full text-left"
         >
             <Pipette size={14} />
             <span>Eyedropper</span>

@@ -1,8 +1,9 @@
+import { Slider } from '../ui/Slider';
 import React, { useState } from 'react';
 import {
   MoveRight, MoveDown, Maximize, Bold, Italic, Sparkles
 } from 'lucide-react';
-import { RibbonGroup, CompactInput } from './RibbonShared';
+import { RibbonGroup, CompactInput, BigButton } from './RibbonShared';
 import { ColorPicker } from '../ColorPicker';
 import { GradientEditor } from '../GradientEditor';
 import { FontPicker } from '../FontPicker';
@@ -50,12 +51,15 @@ export const RibbonFormat = React.memo(() => {
     }
   };
 
-  const isGlassActive = selectedElement?.style.backdropBlur === 20 && 
-                        selectedElement?.style.fill === 'rgba(0, 0, 0, 0.7)';
+  const isGlassActive = selectedElement?.style.backdropBlur === 20 &&
+                        selectedElement?.style.fill.replace(/\s/g, '') === 'rgba(0,0,0,0.7)';
 
 
   return (
     <>
+      <RibbonGroup label={language === 'ru' ? 'Шейдеры' : 'Shaders'}>
+        <BigButton icon={Sparkles} label={language === 'ru' ? 'Редактор' : 'Editor'} onClick={() => useEditorStore.setState({ showShaderEditor: true, shaderEditorScope: 'object' })} />
+      </RibbonGroup>
       {/* GEOMETRY */}
       <RibbonGroup label={t('Geometry', language)}>
         <div className="grid grid-cols-2 gap-x-2 gap-y-1">
@@ -68,7 +72,7 @@ export const RibbonFormat = React.memo(() => {
 
       {/* STYLE */}
       <RibbonGroup label={t('Style', language)}>
-        <div className="flex gap-2 h-full items-center">
+        <div className="flex flex-wrap gap-2 h-full items-center">
           <div className="relative h-full flex flex-col justify-center">
             <button onClick={(e) => togglePicker(e, 'fill')}
               className="flex flex-col items-center justify-center p-1 rounded hover:bg-gray-100 dark:hover:bg-slate-700 w-12 group" title="Fill Color">
@@ -93,21 +97,21 @@ export const RibbonFormat = React.memo(() => {
       {/* EFFECTS */}
       <RibbonGroup label={t('Effects', language)}>
         <div className="flex gap-2 items-center h-full">
-          <div className="flex flex-col gap-1 w-20">
+          <div className="ribbon-format-sliders flex flex-col gap-1 w-20">
             <div className="flex justify-between text-[9px] text-gray-500">
               <span>{t('Opacity', language)}</span>
               <span>{Math.round(selectedElement.style.opacity * 100)}%</span>
             </div>
-            <input type="range" min="0" max="1" step="0.1" value={selectedElement.style.opacity}
+            <Slider aria-label={t('Opacity', language)} min={0} max={1} step={0.1} value={selectedElement.style.opacity}
               onChange={(e) => updateElementStyle('opacity', parseFloat(e.target.value))}
-              className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-500" />
+              className="w-full" />
             <div className="flex justify-between text-[9px] text-gray-500 mt-1">
               <span>{t('Radius', language)}</span>
               <span>{selectedElement.style.borderRadius}</span>
             </div>
-            <input type="range" min="0" max="50" value={selectedElement.style.borderRadius}
+            <Slider aria-label={t('Corner radius', language)} min={0} max={50} value={selectedElement.style.borderRadius}
               onChange={(e) => updateElementStyle('borderRadius', parseInt(e.target.value))}
-              className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-500" />
+              className="w-full" />
           </div>
           <div className="h-8 w-px bg-gray-200 dark:bg-slate-700 mx-1" />
           <button
@@ -123,7 +127,7 @@ export const RibbonFormat = React.memo(() => {
       {/* TYPOGRAPHY (conditional) */}
       {(selectedElement.type === 'text' || selectedElement.type === 'button') && (
         <RibbonGroup label={t('Typography', language)}>
-          <div className="flex items-center gap-2 h-full">
+          <div className="flex flex-wrap items-center gap-2 h-full">
             <div className="flex flex-col justify-center w-36">
               <span className="text-[9px] text-gray-400 mb-0.5">Font</span>
               <FontPicker

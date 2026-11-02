@@ -1,18 +1,19 @@
 {
   "name": "original-powerweb",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:linux": "tauri dev"
+    "tauri:linux": "tauri dev",
+    "typecheck": "tsc --noEmit",
+    "test": "node tests/run.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
-    "@tauri-apps/cli-linux-x64-gnu": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
     "@tauri-apps/plugin-process": "^2.3.1",

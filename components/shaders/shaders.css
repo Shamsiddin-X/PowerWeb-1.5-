@@ -1,0 +1,235 @@
+/* Shader galleries share the same small tiles in the ribbon and editor. */
+.shader-icon-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; }
+.shader-tile { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:5px; min-width:0; padding:5px 3px; border:1px solid transparent; border-radius:5px; color:inherit; background:transparent; cursor:pointer; }
+.shader-tile:hover { background:var(--sh-tint,var(--color-brand-50)); color:var(--sh-accent,var(--color-brand-600)); }
+.dark .shader-tile:hover { background:#f59e0b16; }
+.shader-tile[aria-pressed=true] { border-color:var(--sh-accent,var(--color-brand-500)); background:var(--sh-tint,#f59e0b12); }
+.shader-tile-label { font-size:10px; line-height:1.25; text-align:center; height:25px; overflow:hidden; width:100%; overflow-wrap:anywhere; }
+.shader-swatch { display:grid; place-items:center; flex-shrink:0; width:34px; height:30px; border-radius:4px; color:white; background:linear-gradient(125deg,var(--shader-a),var(--shader-b)); }
+.shader-swatch.is-pointer { background:radial-gradient(ellipse at 35% 35%,var(--shader-a),var(--shader-b) 75%); }
+.shader-swatch.is-hover { box-shadow:inset 0 0 0 2px #ffffff60; }
+.shader-swatch.is-click { background:repeating-radial-gradient(circle,var(--shader-a),var(--shader-b) 6px,var(--shader-a) 10px); }
+.shader-swatch svg { filter:drop-shadow(0 1px 2px #0005); }
+.shader-icon-grid.compact { grid-auto-flow:column; grid-template-rows:repeat(2,28px); grid-template-columns:none; grid-auto-columns:32px; gap:2px; }
+.shader-tile.compact { padding:2px; justify-content:center; }
+.shader-tile.compact .shader-swatch { width:26px; height:22px; }
+.shader-tile.compact .shader-swatch svg { width:13px; height:13px; }
+.shader-gallery-section { margin-bottom:10px; }
+.shader-gallery-section h3 { padding:5px 7px; margin-bottom:4px; font-size:10px; font-weight:600; color:var(--sh-muted); background:var(--sh-bg); border-radius:3px; }
+.shader-dialog {
+  --sh-bg:var(--color-gray-50,#f9fafb); --sh-panel:#fff; --sh-text:var(--color-gray-800,#1f2937);
+  --sh-muted:var(--color-gray-500,#6b7280); --sh-border:var(--color-gray-200,#e5e7eb);
+  --sh-accent:var(--color-brand-600,#ea580c); --sh-tint:var(--color-brand-50,#fffbeb);
+  width:min(1040px,96vw); max-width:96vw; height:min(740px,92dvh); max-height:92dvh;
+  margin:auto; padding:0; overflow:hidden; border:1px solid var(--sh-border); border-radius:8px;
+  background:var(--sh-panel); color:var(--sh-text); box-shadow:0 18px 60px #0003;
+  font:12px Inter,'Segoe UI',system-ui,sans-serif;
+}
+.dark .shader-dialog { --sh-bg:var(--color-slate-900,#0f172a); --sh-panel:var(--color-slate-800,#1e293b); --sh-text:var(--color-slate-200,#e2e8f0); --sh-muted:var(--color-slate-400,#94a3b8); --sh-border:var(--color-slate-700,#334155); --sh-accent:var(--color-brand-400,#fbbf24); --sh-tint:#f59e0b12; }
+.shader-dialog::backdrop { background:#0f172a66; }
+.shader-dialog[open] { display:flex; flex-direction:column; }
+.shader-dialog button { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:6px 8px; border-radius:4px; cursor:pointer; color:inherit; font:inherit; }
+.shader-dialog button:hover { background:var(--sh-bg); }
+.shader-dialog button:disabled { opacity:.4; cursor:default; }
+.shader-dialog :is(input,textarea,select) { font:inherit; color:inherit; }
+.shader-dialog :focus-visible { outline:2px solid var(--sh-accent); outline-offset:2px; }
+.shader-dialog svg { flex-shrink:0; }
+.shader-dialog .shader-tile { display:flex; flex-direction:column; padding:5px 3px; gap:5px; }
+.shader-dialog .shader-tile:hover { background:var(--sh-tint); }
+.shader-header { display:flex; align-items:center; gap:9px; padding:12px 16px; border-bottom:1px solid var(--sh-border); flex-shrink:0; }
+.shader-header > svg { color:var(--sh-accent); width:19px; }
+.shader-header h1 { font-size:15px; font-weight:600; }
+.shader-header > button { margin-left:auto; color:var(--sh-muted); }
+.shader-body { display:grid; grid-template-columns:220px minmax(0,1fr); min-height:0; flex:1; }
+.shader-library { display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--sh-border); }
+.shader-search { display:flex; align-items:center; gap:7px; margin:12px 10px 8px; padding:7px 9px; border:1px solid var(--sh-border); border-radius:5px; color:var(--sh-muted); }
+.shader-search input { width:100%; min-width:0; background:transparent; outline:none; font-size:11px; color:var(--sh-text); }
+.shader-search:focus-within { border-color:var(--sh-accent); }
+.shader-category-select { display:flex; align-items:center; gap:7px; padding:0 10px 10px; font-size:10px; color:var(--sh-muted); }
+.shader-category-select select { flex:1; min-width:0; padding:5px; background:var(--sh-bg); border:1px solid var(--sh-border); border-radius:4px; color:var(--sh-text); font-size:11px; }
+.shader-gallery-scroll { overflow:auto; flex:1; min-height:0; padding:3px 8px 8px; }
+.shader-empty { padding:16px 6px; color:var(--sh-muted); font-size:11px; line-height:1.5; }
+.shader-saved { position:relative; min-width:0; }
+.shader-saved .shader-tile { width:100%; }
+.shader-dialog .shader-delete { position:absolute; top:0; right:0; padding:2px; background:var(--sh-panel); color:var(--sh-muted); }
+.shader-dialog .shader-new { border-top:1px solid var(--sh-border); flex-shrink:0; border-radius:0; padding:10px 6px; font-size:11px; color:var(--sh-accent); }
+.shader-workspace { display:flex; flex-direction:column; min-width:0; min-height:0; }
+.shader-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 12px; border-bottom:1px solid var(--sh-border); flex-shrink:0; }
+.shader-toolbar > div { display:flex; align-items:center; gap:3px; }
+.shader-toolbar button { font-size:11px; color:var(--sh-muted); }
+.shader-toolbar button[aria-pressed=true],.shader-settings-heading button[aria-pressed=true] { background:var(--sh-tint); color:var(--sh-accent); font-weight:600; }
+.shader-destination-bar { display:grid; grid-template-columns:1fr 1.3fr; gap:14px; padding:10px 16px; background:var(--sh-bg); border-bottom:1px solid var(--sh-border); flex-shrink:0; }
+.shader-field { display:flex; flex-direction:column; gap:4px; color:var(--sh-muted); font-size:10px; min-width:0; }
+.shader-field :is(select,input),.shader-advanced input { width:100%; min-width:0; background:var(--sh-panel); border:1px solid var(--sh-border); border-radius:4px; padding:6px 8px; color:var(--sh-text); font-size:11px; }
+.shader-target-note { align-self:center; font-size:11px; color:var(--sh-muted); }
+.shader-work-scroll { overflow:auto; flex:1; min-height:0; padding:12px 16px; }
+.shader-preview-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
+.shader-preview-heading h2 { font-size:12px; font-weight:600; }
+.shader-preview-heading > div { display:flex; gap:3px; }
+.shader-preview-heading button { color:var(--sh-muted); padding:4px 6px; }
+.shader-preview-heading button[aria-pressed=true] { color:var(--sh-accent); }
+.shader-preview-stage { --preview-height:clamp(130px,23vh,180px); height:var(--preview-height); display:flex; justify-content:center; align-items:center; border:1px solid var(--sh-border); border-radius:5px; background-color:var(--sh-bg); background-image:conic-gradient(#9ca3af15 25%,transparent 0 50%,#9ca3af15 0 75%,transparent 0); background-size:12px 12px; overflow:hidden; }
+.shader-preview { position:relative; width:min(100%,calc(var(--preview-height) * var(--preview-ratio))); overflow:hidden; isolation:isolate; touch-action:pan-y; }
+.shader-preview-objects { position:absolute; top:0; left:0; transform-origin:top left; pointer-events:none; }
+.shader-settings-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 10px; border-bottom:1px solid var(--sh-border); padding-bottom:7px; }
+.shader-settings-heading > div { display:flex; gap:4px; }
+.shader-settings-heading button { font-size:11px; color:var(--sh-muted); }
+.shader-colors { display:flex; gap:22px; margin:4px 0 12px; }
+.shader-colors label { display:flex; align-items:center; gap:7px; font-size:11px; }
+.shader-colors input { width:28px; height:26px; background:var(--sh-panel); border:1px solid var(--sh-border); border-radius:4px; padding:2px; cursor:pointer; }
+.shader-compact-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px 24px; }
+.shader-control { display:flex; align-items:center; gap:9px; min-width:0; }
+.shader-control-main { flex:1; min-width:0; }
+.shader-control-main > span { display:block; font-size:10px; color:var(--sh-muted); margin-bottom:3px; }
+.shader-number { display:flex; align-items:center; align-self:center; gap:2px; width:64px; padding:4px; border:1px solid var(--sh-border); border-radius:4px; background:var(--sh-bg); }
+.shader-number input { width:100%; min-width:0; background:transparent; font-size:11px; font-variant-numeric:tabular-nums; }
+.shader-number small { color:var(--sh-muted); font-size:9px; }
+.shader-mode { flex-direction:row; align-items:center; gap:10px; margin:4px 0 12px; }
+.shader-mode select { width:auto; flex:1; }
+.shader-advanced { font-size:10px; color:var(--sh-muted); margin-top:12px; }
+.shader-advanced summary { cursor:pointer; }
+.shader-advanced input { margin-top:6px; }
+.shader-code > div { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:12px 0 8px; font-size:10px; color:var(--sh-muted); }
+.shader-code button { color:var(--sh-accent); border:1px solid var(--sh-border); }
+.shader-code textarea { width:100%; min-height:180px; height:230px; resize:vertical; background:var(--sh-bg); color:var(--sh-text); border:1px solid var(--sh-border); border-radius:4px; padding:10px; font:11px/1.6 Consolas,monospace; }
+.shader-code details { font-size:10px; color:var(--sh-muted); margin-top:10px; line-height:1.6; }
+.shader-code summary { cursor:pointer; }
+.shader-code details p { margin-top:8px; }
+.shader-error { color:#dc2626; white-space:pre-wrap; overflow-wrap:anywhere; background:#ef444410; border:1px solid #ef444433; border-radius:4px; padding:8px; font:11px/1.5 monospace; margin-top:10px; }
+.dark .shader-error { color:#fca5a5; }
+.shader-notice { display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; color:var(--sh-accent); background:var(--sh-tint); border-radius:4px; padding:5px 8px; margin-top:10px; }
+.shader-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid var(--sh-border); padding:10px 14px; flex-shrink:0; }
+.shader-footer > span { color:var(--sh-muted); font-size:10px; }
+.shader-footer > div { display:flex; align-items:center; gap:6px; }
+.shader-footer button { font-size:11px; padding:8px 10px; }
+.shader-footer .shader-apply { color:white; background:var(--color-brand-600,#ea580c); }
+.shader-footer .shader-apply:hover { background:var(--color-brand-700,#c2410c); }
+.shader-footer .shader-remove { color:var(--sh-muted); }
+@media(max-width:850px) { .shader-body { grid-template-columns:185px minmax(0,1fr); } .shader-toolbar button > span { display:none; } .shader-compact-grid { column-gap:14px; } .shader-colors { gap:12px; } .shader-number { width:55px; } .shader-footer > span { max-width:130px; } }
+@media(max-width:620px) { .shader-dialog { height:96dvh; max-height:96dvh; } .shader-body { display:flex; flex-direction:column; overflow:auto; } .shader-library { max-height:210px; min-height:160px; flex-shrink:0; border-right:0; border-bottom:1px solid var(--sh-border); } .shader-gallery-scroll { min-height:65px; } .shader-icon-grid { grid-template-columns:repeat(5,minmax(0,1fr)); } .shader-workspace { flex-shrink:0; overflow:visible; } .shader-work-scroll { overflow:visible; padding:10px; } .shader-compact-grid { grid-template-columns:1fr; } .shader-destination-bar { padding:8px 10px; gap:8px; } .shader-footer { flex-wrap:wrap; } .shader-footer > span { max-width:none; } .shader-footer > div { margin-left:auto; } .shader-preview-stage { --preview-height:150px; } }
+/* The basic screen exposes size and opacity; specialist settings are disclosed on demand. */
+.shader-size-control { margin-bottom:13px;padding:10px 12px;border:1px solid var(--sh-border);border-radius:6px;background:var(--sh-bg); }
+.shader-size-control .shader-control { gap:16px; }
+.shader-size-presets { display:flex;gap:5px;margin-top:7px; }
+.shader-size-presets button { flex:1;font-size:10px;padding:5px 7px;border:1px solid var(--sh-border);background:var(--sh-panel); }
+.shader-size-presets button span { color:var(--sh-muted);font-size:9px; }
+.shader-size-presets button[aria-pressed=true] { border-color:var(--sh-accent);background:var(--sh-tint);color:var(--sh-accent); }
+.shader-comparison { display:flex;gap:2px;border:1px solid var(--sh-border);padding:2px;border-radius:5px; }
+.shader-comparison button { font-size:10px;padding:3px 7px; }
+.shader-comparison button[aria-pressed=true] { color:var(--sh-accent);background:var(--sh-tint); }
+.shader-preview-status { display:flex;justify-content:space-between;gap:8px;margin-top:5px;color:var(--sh-muted);font-size:9px;font-variant-numeric:tabular-nums; }
+.shader-dialog .editor-color-trigger { padding:4px; }
+.shader-category-select .editor-select { flex:1;min-width:0; }
+.shader-mode .editor-select { flex:1; }
+.shader-control .editor-number { margin-top:13px; }
+.shader-dialog .editor-disclosure .shader-field { margin-top:10px; }
+@media(max-width:850px) { .shader-compact-grid { grid-template-columns:1fr;gap:7px; } .shader-control .editor-number { width:100px; } }
+
+/* Shared gallery: comfortable hit areas in both the ribbon and the editor. */
+.shader-icon-grid.compact { grid-template-rows:repeat(2,37px);grid-auto-columns:46px;gap:3px; }
+.shader-tile.compact { padding:3px; }
+.shader-tile.compact .shader-swatch { width:38px;height:30px;border-radius:6px; }
+.shader-tile.compact .shader-swatch svg { width:20px;height:20px; }
+.shader-tile.compact .shader-swatch-type { font-size:20px; }
+.shader-swatch.target-text { background:#151222; }
+.shader-swatch-type { font-size:31px;font-weight:800;letter-spacing:-2px;color:var(--shader-a);text-shadow:2px 2px 0 var(--shader-b); }
+.shader-swatch.target-media { background:repeating-linear-gradient(135deg,transparent 0 7px,#ffffff28 7px 9px),linear-gradient(135deg,var(--shader-a),var(--shader-b)); }
+.shader-dialog { width:min(1240px,96vw);height:min(850px,94dvh);max-height:94dvh;font-size:13px; }
+.shader-body { grid-template-columns:276px minmax(0,1fr); }
+.shader-dialog .shader-icon-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:7px; }
+.shader-dialog .shader-tile { padding:7px;gap:6px; }
+.shader-dialog .shader-swatch { width:100%;height:66px;border-radius:7px; }
+.shader-dialog .shader-tile-label { font-size:11px;height:auto;min-height:14px;overflow-wrap:normal; }
+.shader-tile-kind { font-size:9px;color:var(--sh-muted); }
+.shader-gallery-section h3 { display:flex;align-items:center;gap:7px;font-size:11px;padding:8px; }
+.shader-gallery-section h3 > span { margin-left:auto;font-size:10px;opacity:.7; }
+.shader-preview-stage { --preview-height:clamp(220px,33vh,350px); }
+.shader-header h1 { font-size:17px; }
+.shader-preview-heading h2 { font-size:14px; }
+.shader-filter-row { display:flex;gap:4px;flex-wrap:wrap;padding:0 10px 10px; }
+.shader-dialog .shader-filter-row button { font-size:10px;padding:5px 7px;border:1px solid var(--sh-border); }
+.shader-filter-row button[aria-pressed=true] { color:var(--sh-accent);background:var(--sh-tint);border-color:var(--sh-accent); }
+.shader-compatibility { display:flex;align-items:center;gap:7px;padding:8px 10px;margin-bottom:10px;border-radius:5px;color:var(--sh-muted);background:var(--sh-bg);font-size:11px; }
+.shader-compatibility.is-incompatible { color:var(--sh-accent);background:var(--sh-tint); }
+.shader-preview-demo { padding:0 8px;color:var(--sh-muted);font-size:10px; }
+@media(max-width:850px) { .shader-body { grid-template-columns:220px minmax(0,1fr); }.shader-preview-stage { --preview-height:240px; } }
+@media(max-width:620px) { .shader-dialog .shader-icon-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }.shader-body { display:flex; }.shader-dialog .shader-swatch { height:50px; }.shader-preview-stage { --preview-height:220px; } }
+
+/* Contextual editor: keep the canvas visible around the dialog. */
+.shader-dialog { width:980px;height:660px;max-width:calc(94vw / var(--sh-ui-zoom,1));max-height:calc(90dvh / var(--sh-ui-zoom,1)); }
+.shader-dialog.is-object { width:900px;height:620px; }
+.shader-dialog.is-text { width:760px;height:530px; }
+.shader-dialog.is-text .shader-body { grid-template-columns:190px minmax(0,1fr); }
+.shader-dialog.is-text .shader-work-scroll { padding:10px 14px; }
+.shader-dialog.is-text .shader-toolbar button > span { display:none; }
+.shader-dialog.is-text .shader-gallery-scroll { padding:6px; }
+.shader-dialog.is-text .shader-icon-grid { gap:4px; }
+.shader-dialog.is-text .shader-swatch { height:47px; }
+.shader-dialog.is-text .shader-tile-kind { display:none; }
+.shader-dialog.is-text .shader-tile-label { font-size:10px; }
+.shader-dialog.is-text .shader-preview-stage { --preview-height:110px; }
+.shader-dialog.is-text .shader-preview-status { display:none; }
+.shader-dialog.is-object:not(.is-text) .shader-preview-stage { --preview-height:210px; }
+.shader-dialog:not(.is-object) .shader-preview-stage { --preview-height:240px; }
+.shader-dialog .shader-target-chip { margin-left:auto;max-width:240px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px;color:var(--sh-muted);background:var(--sh-bg); }
+.shader-target-chip + button { margin-left:0; }
+.shader-context-filter { display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;color:var(--sh-muted);font-size:10px; }
+.shader-context-filter button { color:var(--sh-accent);font-size:10px;padding:3px; }
+.shader-toggle { display:flex;align-items:center;gap:7px;font-size:11px; }
+.shader-toggle-track { display:block;width:29px;height:17px;padding:2px;border-radius:20px;background:var(--sh-border);transition:background .15s; }
+.shader-toggle-track > span { display:block;width:13px;height:13px;border-radius:50%;background:white;box-shadow:0 1px 3px #0002;transition:transform .15s; }
+.shader-toggle[aria-checked=true] .shader-toggle-track { background:var(--sh-accent); }
+.shader-toggle[aria-checked=true] .shader-toggle-track > span { transform:translateX(12px); }
+.shader-behavior { display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px; }
+.shader-inline-size { margin-top:7px; }
+.shader-settings-heading { margin:8px 0; }
+.shader-dialog .shader-compact-grid { gap:6px 18px; }
+.shader-dialog.is-text .shader-colors { margin-bottom:8px; }
+@media(max-width:620px) { .shader-dialog.is-text .shader-body { display:flex; }.shader-dialog .shader-target-chip { max-width:135px; }.shader-dialog .shader-library { max-height:160px;min-height:100px; }.shader-dialog.is-text .shader-icon-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+.context-shader-gallery { padding:8px 10px 0;max-height:240px;overflow:auto; }
+.context-shader-gallery .shader-icon-grid.compact { display:grid;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:37px;gap:4px; }
+.context-shader-gallery .shader-tile.compact .shader-swatch { width:34px; }
+
+/* 100px ribbon includes 12px panel padding and a persistent group caption. */
+.shader-icon-grid.compact { grid-template-rows:repeat(2,30px);grid-auto-columns:42px;gap:3px; }
+.shader-tile.compact { min-height:0;height:30px;padding:2px; }
+.shader-tile.compact .shader-swatch { width:36px;height:26px; }
+.shader-ribbon-collection { display:flex;align-items:center;gap:5px;height:63px; }
+.shader-ribbon-more { display:grid;place-items:center;align-self:stretch;width:20px;min-height:0;padding:0;border:1px solid var(--color-gray-200);border-radius:5px;color:var(--color-gray-500); }
+.shader-ribbon-more:hover { background:var(--color-brand-50);color:var(--color-brand-600); }
+.dark .shader-ribbon-more { border-color:var(--color-slate-700);color:var(--color-slate-400); }
+.shader-ribbon-fullgallery .shader-icon-grid { grid-template-columns:repeat(4,minmax(0,1fr));gap:5px; }
+.shader-ribbon-fullgallery .shader-swatch { width:60px;height:40px; }
+.shader-ribbon-fullgallery .shader-tile-label { height:auto;min-height:25px;font-size:10px; }
+.shader-ribbon-fullgallery .shader-tile-kind { display:none; }
+.shader-swatch { position:relative;overflow:hidden;padding:0; }
+.shader-swatch > svg { width:100%;height:100%;filter:none; }
+.shader-mini-live { position:absolute;inset:0;display:block;overflow:hidden;background:#151222;pointer-events:none; }
+.shader-mini-live img { width:100%;height:100%;object-fit:cover; }
+.shader-mini-text { display:block;width:100%;height:100%;font:800 24px/1.2 Arial,sans-serif;text-align:center;color:white; }
+.shader-preview-original { pointer-events:none;overflow:hidden; }
+.shader-split-divider { position:absolute;top:0;bottom:0;width:2px;background:white;box-shadow:0 0 5px #0005;pointer-events:none; }
+.shader-split-label { position:absolute;top:7px;font-size:9px;padding:3px 5px;border-radius:4px;background:#111827a6;color:white;pointer-events:none; }
+.shader-split-label.before { left:7px; }.shader-split-label.after { right:7px; }
+.shader-split-control { padding:4px 0 0; }
+
+/* Paste-and-apply composer: a separate, compact tool. */
+.shader-dialog.shader-code-dialog { width:700px;height:400px;max-height:calc(88dvh / var(--sh-ui-zoom,1));border-radius:10px; }
+.shader-code-dialog .shader-header { background:var(--sh-bg); }
+.shader-code-dialog .shader-header h1 { font-size:14px; }
+.shader-code-compose { display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:12px;flex:1;min-height:0;padding:12px; }
+.shader-code-input { min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--sh-border);border-radius:7px;overflow:hidden;background:var(--sh-bg); }
+.shader-code-input textarea { flex:1;min-height:0;resize:none;width:100%;outline:none;padding:12px;background:transparent;font:11px/1.65 Consolas,monospace;tab-size:2; }
+.shader-code-input:focus-within { border-color:var(--sh-accent); }
+.shader-code-input > div { display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-top:1px solid var(--sh-border);font-size:9px;color:var(--sh-muted); }
+.shader-code-input > div button { font-size:10px;color:var(--sh-accent);padding:3px; }
+.shader-code-side { display:flex;flex-direction:column;gap:10px;min-width:0; }
+.shader-code-dialog .shader-code-preview { flex:1;min-height:120px;display:flex;align-items:center;border:1px solid var(--sh-border);border-radius:7px;background:var(--sh-bg);overflow:hidden; }
+.shader-code-preview .shader-preview-section { width:100%; }
+.shader-code-preview .shader-preview-heading,.shader-code-preview .shader-preview-status,.shader-code-preview .shader-split-control,.shader-code-preview .shader-split-label,.shader-code-preview .shader-split-divider { display:none; }
+.shader-code-preview .shader-preview-stage { --preview-height:155px!important;border:0;border-radius:0; }
+.shader-code-preview .shader-preview-original { display:none; }
+.shader-code-placeholder { flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--sh-muted);font-size:10px; }
+.shader-code-status { min-height:15px;text-align:center;font-size:10px;color:var(--sh-muted); }
+.shader-code-dialog .shader-code-error { flex-shrink:1;max-height:75px;overflow:auto;white-space:pre-wrap;padding:6px 12px;color:#dc2626;font:10px/1.4 monospace;background:#ef44440a; }
+@media(max-width:620px) { .shader-code-compose { grid-template-columns:minmax(0,1fr) 140px;gap:8px;padding:8px; }.shader-dialog.shader-code-dialog { height:420px; }.shader-code-preview .shader-preview-stage { --preview-height:125px!important; } }

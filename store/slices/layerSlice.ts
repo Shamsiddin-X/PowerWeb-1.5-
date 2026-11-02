@@ -1,3 +1,4 @@
+import { ShaderConfig, isShaderConfig, shaderCanApply } from '../../types/shaders';
 // store/slices/layerSlice.ts — Layer management actions
 
 import { StateCreator } from 'zustand';
@@ -5,6 +6,7 @@ import { EditorState, Layer } from '../../types';
 import { withHistory, generateId } from '../helpers';
 
 export interface LayerSlice {
+  setLayerShader: (layerId: string, shader: ShaderConfig | null) => void;
   addLayer: () => void;
   deleteLayer: () => void;
   selectLayer: (layerId: string) => void;
@@ -16,6 +18,18 @@ export interface LayerSlice {
 }
 
 export const createLayerSlice: StateCreator<EditorState, [], [], LayerSlice> = (set, get) => ({
+
+  setLayerShader: (layerId, shader) => set(state => {
+    if (shader !== null && (!isShaderConfig(shader)||!shaderCanApply(shader))) return {};
+    const page = state.project.pages.find(p => p.id === state.project.activePageId);
+    const layer = page?.layers.find(l => l.id === layerId);
+    if (!layer || layer.locked || !layer.visible) return {};
+    const project = { ...state.project, pages: state.project.pages.map(p => p.id !== page!.id ? p : {
+      ...p, layers: p.layers.map(l => l.id !== layerId ? l : { ...l, shader: shader ? structuredClone(shader) : null })
+    }) };
+    return withHistory(state, project);
+  }),
+
 
   addLayer: () => set(state => {
     const activePage = state.project.pages.find(p => p.id === state.project.activePageId);
@@ -52,9 +66,9 @@ export const createLayerSlice: StateCreator<EditorState, [], [], LayerSlice> = (
     return { ...withHistory(state, newProject), activeLayerId: newActiveId };
   }),
 
-  selectLayer: (layerId) => set({
-    activeLayerId: layerId,
-    selectedElementIds: [],
+  selectLayer: (layerId) => set(s => {
+    if (!s.project.pages.find(p => p.id === s.project.activePageId)?.layers.some(l => l.id === layerId)) return {};
+    return { activeLayerId: layerId, selectedElementIds: [], historyMergeKey: null };
   }),
 
   toggleLayerVisibility: (layerId) => set(state => {
@@ -114,6 +128,7 @@ export const createLayerSlice: StateCreator<EditorState, [], [], LayerSlice> = (
       ...state.project,
       pages: state.project.pages.map(p => {
         if (p.id !== state.project.activePageId) return p;
+        if (![fromDisplayIndex, toDisplayIndex].every(i => Number.isInteger(i) && i >= 0 && i < p.layers.length)) return p;
         // Display is reversed (front layer first), storage is back-to-front
         const displayOrder = [...p.layers].reverse();
         const [moved] = displayOrder.splice(fromDisplayIndex, 1);

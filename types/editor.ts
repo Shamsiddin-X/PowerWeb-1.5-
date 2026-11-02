@@ -11,7 +11,8 @@ export interface ContextMenuState {
   type?: 'element' | 'page';
 }
 
-export type Language = 'en' | 'ru' | 'tj';
+export type Language = 'en' | 'ru' | 'tj' | 'ar' | 'zh' | 'fr' | 'es';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface RibbonContribution {
   id: string;
@@ -27,7 +28,22 @@ export interface PluginRegistry {
   ribbonButtons: RibbonContribution[];
 }
 
+export interface HistoryContext {
+  activeLayerId: string;
+  selectedElementIds: string[];
+}
+export interface HistoryTransaction extends HistoryContext {
+  project: Project;
+  label: string;
+}
+
 export interface EditorState {
+  showShaderEditor: boolean;
+  showShaderCodeEditor: boolean;
+  shaderPresetId: string | null;
+  shaderEditorScope: 'layer' | 'object' | null;
+  showStartScreen: boolean;
+  hasOpenProject: boolean;
   project: Project;
   activeLayerId: string; 
   hoveredLayerId: string | null;
@@ -35,6 +51,15 @@ export interface EditorState {
   insertMode: ElementType | null; 
   scale: number;
   showGrid: boolean;
+  showPages: boolean;
+  showStatusBar: boolean;
+  focusMode: boolean;
+  gridSize: number;
+  snapEnabled: boolean;
+  showGuides: boolean;
+  uiScale: number;
+  ribbonExpanded: boolean;
+  themeMode: ThemeMode;
   showLayers: boolean;
   showRightPanel: boolean;
   isDragging: boolean;
@@ -46,4 +71,12 @@ export interface EditorState {
   pluginContributions: PluginRegistry;
   history: Project[];
   historyIndex: number;
+  historyContexts: HistoryContext[];
+  historyTransaction: HistoryTransaction | null;
+  historyMergeKey: string | null;
+  historyMergeTime: number;
+  pasteCount: number;
+  clipboardMode: 'copy' | 'cut';
+  savedProject: Project | null;
+  isPluginRunning: boolean;
 }

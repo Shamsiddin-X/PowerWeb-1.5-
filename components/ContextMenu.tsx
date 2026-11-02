@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { 
   Scissors, Copy, Clipboard, Trash2, 
   ArrowUp, ArrowDown, CopyPlus,
-  Palette, PaintBucket, Pen, Link, X, Droplets
+  Palette, PaintBucket, Pen, Link, X, Droplets, Sparkles, ChevronRight, MousePointer2
 } from 'lucide-react';
+import { ShaderGallery } from './shaders/ShaderGallery';
+import { SHADER_PRESETS } from '../utils/shaderPresets';
+import { ShaderConfig, shaderSupports, shaderCanApply } from '../types/shaders';
+import './shaders/shaders.css';
 import { useEditorStore } from '../store/useEditorStore';
 
 const PRESET_COLORS = [
@@ -18,17 +22,60 @@ export const ContextMenu: React.FC = () => {
     contextMenu, closeContextMenu, 
     cutSelected, copySelected, pasteElements, duplicateSelected,
     bringToFront, sendToBack, deleteSelected, 
-    updateElementStyle, updateElementStyleBulk,
+    updateElementStyle, updateElementStyleBulk, updateElementProp, project, selectedElementIds,
     renamePage, duplicatePage, deletePage
   } = useEditorStore();
 
-  const [activeTool, setActiveTool] = useState<'none' | 'fill' | 'stroke'>('none');
+  const [activeTool, setActiveTool] = useState<'none' | 'fill' | 'stroke' | 'shader'>('none');
 
+  useEffect(()=>{setActiveTool('none');},[contextMenu.visible,contextMenu.elementId]);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  useLayoutEffect(() => {
+    if (!contextMenu.visible) return;
+    const rect = menuRef.current?.getBoundingClientRect();
+    const zoom=Number(getComputedStyle(document.body).zoom)||1;
+    setPosition({ x: Math.max(4, Math.min(contextMenu.x/zoom, (window.innerWidth - (rect?.width || 256))/zoom - 4)),
+      y: Math.max(4, Math.min(contextMenu.y/zoom, (window.innerHeight - (rect?.height || 400))/zoom - 4)) });
+  }, [contextMenu.visible, contextMenu.x, contextMenu.y, activeTool]);
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+    const close = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) closeContextMenu(); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [contextMenu.visible, closeContextMenu]);
   if (!contextMenu.visible) return null;
 
+  const menuMaxHeight=(window.innerHeight-16)/(Number(getComputedStyle(document.body).zoom)||1);
+  const page=project.pages.find(p=>p.id===project.activePageId);
+  const targetId=contextMenu.elementId||selectedElementIds[0];
+  const targetLayer=page?.layers.find(layer=>layer.elements.some(element=>element.id===targetId));
+  const target=targetLayer?.elements.find(element=>element.id===targetId);
+  const canShade=!!target&&shaderSupports(target.type)&&!!targetLayer?.visible&&!targetLayer?.locked;
+  const setShader=(shader:ShaderConfig|null)=>{
+    if(!canShade||!target||shader&&!shaderCanApply(shader,target.type))return;
+    const state=useEditorStore.getState();state.commitTransaction();
+    state.updateSpecificElement(target.id,{shader:shader?structuredClone(shader):null});
+    closeContextMenu();
+  };
+  const editShader=()=>{
+    if(!canShade||!target)return;
+    const state=useEditorStore.getState();state.selectElement(target.id);
+    useEditorStore.setState({showShaderEditor:true,shaderPresetId:null,shaderEditorScope:'object'});
+    closeContextMenu();
+  };
   const handleAction = (e: React.MouseEvent, action: string, value?: any) => {
     e.stopPropagation();
     
+    if (action === 'hyperlink') {
+      const url = prompt('URL:', 'https://');
+      if (url) {
+        const page = project.pages.find(p => p.id === project.activePageId);
+        const element = page?.layers.flatMap(l => l.elements).find(el => selectedElementIds.includes(el.id));
+        updateElementProp('logic', [...(element?.logic || []).filter(b => b.event?.type !== 'click'),
+          { event: { type: 'click' }, actions: [{ type: 'navigateToUrl', url }] }]);
+      }
+    }
     // Element actions
     if (action === 'cut') cutSelected();
     if (action === 'copy') copySelected();
@@ -75,7 +122,7 @@ export const ContextMenu: React.FC = () => {
     closeContextMenu();
   };
 
-  const toggleTool = (e: React.MouseEvent, tool: 'fill' | 'stroke') => {
+  const toggleTool = (e: React.MouseEvent, tool: 'fill' | 'stroke' | 'shader') => {
     e.stopPropagation();
     setActiveTool(activeTool === tool ? 'none' : tool);
   };
@@ -84,8 +131,8 @@ export const ContextMenu: React.FC = () => {
   if (contextMenu.type === 'page') {
       return (
         <div 
-          className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 w-56 select-none overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          className="fixed z-50 max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 w-56 select-none animate-in fade-in zoom-in-95 duration-100"
+          ref={menuRef} style={{ left: position.x, top: position.y, maxHeight:menuMaxHeight }}
           onContextMenu={(e) => e.preventDefault()}
         >
             <div className="flex flex-col text-sm text-gray-700 dark:text-slate-200 py-1">
@@ -110,8 +157,8 @@ export const ContextMenu: React.FC = () => {
   // === ELEMENT CONTEXT MENU (DEFAULT) ===
   return (
     <div 
-      className="fixed z-50 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 w-64 select-none overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-      style={{ left: contextMenu.x, top: contextMenu.y }}
+      className="fixed z-50 max-h-[90dvh] overflow-y-auto bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 w-64 select-none animate-in fade-in zoom-in-95 duration-100"
+      ref={menuRef} style={{ left: position.x, top: position.y, maxHeight:menuMaxHeight }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* Visual Quick Actions Header */}
@@ -151,7 +198,7 @@ export const ContextMenu: React.FC = () => {
       </div>
 
       {/* --- COLOR PALETTE (Conditional) --- */}
-      {activeTool !== 'none' && (
+      {(activeTool === 'fill'||activeTool === 'stroke') && (
           <div className="bg-gray-100 dark:bg-slate-900 p-3 border-b border-gray-200 dark:border-slate-700 animate-in slide-in-from-top-2 duration-150">
               <div className="text-[10px] font-bold text-gray-500 dark:text-slate-400 uppercase mb-2 flex justify-between items-center">
                   <span>Выберите цвет {activeTool === 'fill' ? 'заливки' : 'контура'}</span>
@@ -177,9 +224,22 @@ export const ContextMenu: React.FC = () => {
           </div>
       )}
 
+      {canShade&&activeTool==='shader'&&<div className="context-shader-gallery border-b border-gray-200 dark:border-slate-700">
+        <ShaderGallery presets={SHADER_PRESETS.filter(preset=>shaderCanApply(preset.config,target!.type))} selected={target?.shader||undefined} onSelect={setShader} compact/>
+        <button type="button" onClick={editShader} className="text-xs text-brand-600 dark:text-brand-400 px-2 py-2 w-full text-left">Настроить эффект…</button>
+        <button type="button" onClick={()=>{if(target)useEditorStore.getState().selectElement(target.id);useEditorStore.setState({showShaderCodeEditor:true});closeContextMenu();}} className="text-xs text-brand-600 dark:text-brand-400 px-2 py-2 w-full text-left">Создать кодом…</button>
+      </div>}
       {/* Standard Actions List */}
       <div className="flex flex-col text-sm text-gray-700 dark:text-slate-200 py-1">
         
+        {canShade&&<>
+          <button type="button" aria-expanded={activeTool==='shader'} onClick={e=>toggleTool(e,'shader')} className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 gap-3 text-left"><Sparkles size={16} className="text-brand-500"/><span>Шейдеры</span><ChevronRight size={14} className="ml-auto"/></button>
+          {target?.shader&&<>
+            {target.shader.interaction&&target.shader.interaction!=='none'&&<button type="button" onClick={()=>setShader({...target.shader!,interactive:target.shader!.interactive===false})} className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 gap-3 text-left text-xs"><MousePointer2 size={15}/><span>{target.shader.interactive===false?'Включить реакцию на курсор':'Отключить реакцию на курсор'}</span></button>}
+            <button type="button" onClick={()=>setShader(null)} className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 gap-3 text-left text-xs"><X size={15}/><span>Убрать шейдер</span></button>
+          </>}
+          <div className="border-t border-gray-100 dark:border-slate-700 my-1"/>
+        </>}
         <button onClick={(e) => handleAction(e, 'hyperlink')} className="flex items-center px-4 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 gap-3 text-left">
           <Link size={16} className="text-gray-500 dark:text-slate-400" />
           <span>Гиперссылка...</span>

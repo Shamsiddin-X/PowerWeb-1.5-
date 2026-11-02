@@ -5,6 +5,7 @@ import { RibbonGroup, BigButton } from './RibbonShared';
 import { t } from '../../utils/localization';
 import { useEditorStore } from '../../store/useEditorStore';
 import { useSelectedElement } from '../../store/selectors';
+import { updateLogicAction } from '../../utils/logicEditing';
 
 export const RibbonLogic = React.memo(() => {
   const { language, project, updateElementProp } = useEditorStore();
@@ -18,11 +19,10 @@ export const RibbonLogic = React.memo(() => {
   const currentActionType = currentLogicAction?.type || 'none';
 
   const handleUpdateLogic = (newActionType: string, targetIdOrUrl?: string) => {
-    const other = (selectedElement.logic || []).filter(b => b.event?.type !== activeEventType);
-    let finalLogic = other;
+    let action: Action | undefined;
     
     if (newActionType !== 'none') {
-      const action: Action = { type: newActionType as any };
+      action = { type: newActionType as Action['type'] };
       if (newActionType === 'navigateToPage') {
         if (targetIdOrUrl) {
           action.targetId = targetIdOrUrl;
@@ -36,9 +36,8 @@ export const RibbonLogic = React.memo(() => {
       } else if (newActionType === 'showModal') {
         action.targetId = targetIdOrUrl || '';
       }
-      finalLogic = [...other, { event: { type: activeEventType }, actions: [action] }];
     }
-    updateElementProp('logic', finalLogic);
+    updateElementProp('logic', updateLogicAction(selectedElement.logic, activeEventType, action));
   };
 
   return (

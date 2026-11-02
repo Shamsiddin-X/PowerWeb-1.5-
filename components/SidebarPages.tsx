@@ -22,7 +22,7 @@ export const SidebarPages = React.memo(() => {
   };
 
   return (
-    <div className="w-40 bg-gray-50 dark:bg-slate-900 border-r border-gray-300 dark:border-slate-800 flex flex-col h-full select-none transition-colors">
+    <div className="editor-pages w-40 bg-gray-50 dark:bg-slate-900 border-r border-gray-300 dark:border-slate-800 flex flex-col h-full select-none transition-colors">
       <div className="p-2 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
         <h3 className="font-semibold text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">{t('Pages', language)}</h3>
         <button onClick={addPage} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-800 rounded text-brand-600 dark:text-brand-400 transition-colors" title="Add New Page">
@@ -35,6 +35,7 @@ export const SidebarPages = React.memo(() => {
           <div key={page.id}
             onClick={() => switchPage(page.id)}
             onContextMenu={(e) => handlePageContextMenu(e, page.id)}
+            data-active={project.activePageId === page.id || undefined}
             className={`group flex items-center p-1.5 rounded-md cursor-pointer transition-all relative ${
               project.activePageId === page.id
                 ? 'bg-brand-100 dark:bg-slate-800 text-brand-700 dark:text-brand-400 ring-1 ring-brand-300 dark:ring-slate-600'

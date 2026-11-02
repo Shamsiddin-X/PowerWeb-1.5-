@@ -32,10 +32,10 @@ export const createNewElement = (type: ElementType, x: number, y: number, w?: nu
       return { ...base, type, width: w || 120, height: h || 40, content: 'Click Me', style: { ...DEFAULT_STYLE, fill: '#3b82f6', borderRadius: 6, strokeWidth: 0, textAlign: 'center', color: '#ffffff' } };
 
     case 'image':
-      return { ...base, type, width: w || 200, height: h || 150, content: 'https://picsum.photos/200/150', style: { ...DEFAULT_STYLE, strokeWidth: 0 } };
+      return { ...base, type, width: w || 200, height: h || 150, content: '', style: { ...DEFAULT_STYLE, strokeWidth: 0 } };
 
     case 'video':
-      return { ...base, type, width: w || 400, height: h || 225, content: 'https://www.w3schools.com/html/mov_bbb.mp4', style: { ...DEFAULT_STYLE, strokeWidth: 0, fill: '#000000' }, videoProps: { autoplay: true, loop: true, muted: true } };
+      return { ...base, type, width: w || 400, height: h || 225, content: '', style: { ...DEFAULT_STYLE, strokeWidth: 0, fill: '#000000' }, videoProps: { autoplay: true, loop: true, muted: true } };
 
     case 'triangle':
     case 'rightTriangle':

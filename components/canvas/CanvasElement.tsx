@@ -1,8 +1,13 @@
+import { useElementAnimations } from '../../hooks/useElementAnimations';
+import { ShaderCanvas } from '../shaders/ShaderCanvas';
 // components/canvas/CanvasElement.tsx — Pure visual renderer for a single canvas element
 
-import React, { useRef, useLayoutEffect } from 'react';
+import React, { useRef, useLayoutEffect, useId, useEffect } from 'react';
 import { Pin } from 'lucide-react';
 import { CanvasElement } from '../../types';
+import { useEditorStore } from '../../store/useEditorStore';
+import { getSvgPath } from '../../utils/shapeData';
+import { shaderUsesSource, shaderCanApply } from '../../types/shaders';
 
 export type ResizeDirection = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w';
 
@@ -13,38 +18,30 @@ interface CanvasElementRendererProps {
   scale: number;
   onResizeMouseDown?: (e: React.MouseEvent, direction: ResizeDirection) => void;
   onUpdate?: (updates: Partial<CanvasElement>) => void;
+  onFinishEditing?: () => void;
+  shaderPaused?: boolean;
+  shaderDemo?: boolean;
+  onShaderError?: (message:string)=>void;
 }
 
-const getSvgPath = (shapeType: string): string => {
-  switch (shapeType) {
-    case 'triangle':      return '50,0 100,100 0,100';
-    case 'rightTriangle': return '0,0 100,100 0,100';
-    case 'diamond':       return '50,0 100,50 50,100 0,50';
-    case 'parallelogram': return '25,0 100,0 75,100 0,100';
-    case 'trapezoid':     return '25,0 75,0 100,100 0,100';
-    case 'pentagon':      return '50,0 100,38 82,100 18,100 0,38';
-    case 'hexagon':       return '25,0 75,0 100,50 75,100 25,100 0,50';
-    case 'octagon':       return '30,0 70,0 100,30 100,70 70,100 30,100 0,70 0,30';
-    case 'star':          return '50,0 61,35 98,35 68,57 79,91 50,70 21,91 32,57 2,35 39,35';
-    case 'star4':         return '50,0 65,35 100,50 65,65 50,100 35,65 0,50 35,35';
-    case 'star6':         return '50,0 65,25 100,25 75,50 100,75 65,75 50,100 35,75 0,75 25,50 0,25 35,25';
-    case 'arrowRight':    return '0,25 50,25 50,0 100,50 50,100 50,75 0,75';
-    case 'arrowLeft':     return '100,25 50,25 50,0 0,50 50,100 50,75 100,75';
-    case 'arrowUp':       return '25,100 25,50 0,50 50,0 100,50 75,50 75,100';
-    case 'arrowDown':     return '25,0 25,50 0,50 50,100 100,50 75,50 75,0';
-    case 'cross':         return '35,0 65,0 65,35 100,35 100,65 65,65 65,100 35,100 35,65 0,65 0,35 35,35';
-    case 'heart':         return 'M 10,30 A 20,20 0,0,1 50,30 A 20,20 0,0,1 90,30 Q 90,60 50,90 Q 10,60 10,30 z';
-    case 'message':       return '0,0 100,0 100,75 20,75 0,100 0,75';
-    default:              return '';
-  }
-};
 
 const CanvasElementRendererInner: React.FC<CanvasElementRendererProps> = ({
-  element, isSelected, isEditing = false, scale, onResizeMouseDown, onUpdate,
+  element, isSelected, isEditing = false, scale, onResizeMouseDown, onUpdate, onFinishEditing, shaderPaused, shaderDemo, onShaderError,
 }) => {
   const { style, width, height, type, content } = element;
+  const animationRef=useElementAnimations(element.animations,isEditing||shaderDemo);
+  const objectFit=style.objectFit||'fill';
+  const videoRef=useRef<HTMLVideoElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const clipId='shader-clip-'+useId().replace(/:/g,'');
+  const shader=element.shader&&shaderCanApply(element.shader,type)?element.shader:null;
+  const sourceShader=shader&&shaderUsesSource(shader);
+  const shaderCanvas=shader?<ShaderCanvas shader={shader} backgroundColor={style.fill} surfaceSize={{width,height}} paused={shaderPaused} demo={shaderDemo} onError={onShaderError}/>:null;
 
+  useEffect(()=>{
+    if(!shaderDemo||!videoRef.current)return;
+    if(shaderPaused)videoRef.current.pause();else videoRef.current.play().catch(()=>{});
+  },[shaderDemo,shaderPaused,content]);
   useLayoutEffect(() => {
     if (isEditing && textareaRef.current && (type === 'text' || type === 'button')) {
       textareaRef.current.style.height = 'auto';
@@ -57,11 +54,11 @@ const CanvasElementRendererInner: React.FC<CanvasElementRendererProps> = ({
 
   const divStyle: React.CSSProperties = {
     position: 'absolute', left: 0, top: 0, width: '100%', height: '100%',
-    background: style.fill,
+    background: shader && !sourceShader ? 'transparent' : style.fill,
     borderColor: style.stroke,
     borderWidth: `${style.strokeWidth}px`,
     borderStyle: 'solid',
-    borderRadius: style.borderRadius,
+    borderRadius: type === 'circle' ? '50%' : style.borderRadius,
     opacity: style.opacity,
     boxShadow: `0 0 ${style.shadowBlur}px ${style.shadowColor}`,
     backdropFilter: style.backdropBlur ? `blur(${style.backdropBlur}px)` : undefined,
@@ -86,7 +83,11 @@ const CanvasElementRendererInner: React.FC<CanvasElementRendererProps> = ({
           style={{ color: style.color, fontSize: style.fontSize, fontFamily: style.fontFamily, fontWeight: style.fontWeight, fontStyle: style.fontStyle as any, textAlign: style.textAlign, pointerEvents: 'auto', whiteSpace: 'pre-wrap', lineHeight: '1.2' }}
           autoFocus
           onMouseDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.code === 'Escape') { useEditorStore.getState().cancelTransaction(); onFinishEditing?.(); }
+            else if ((e.ctrlKey || e.metaKey) && e.code === 'Enter') { useEditorStore.getState().commitTransaction(); onFinishEditing?.(); }
+          }}
         />
       );
     }
@@ -105,37 +106,45 @@ const CanvasElementRendererInner: React.FC<CanvasElementRendererProps> = ({
       case 'rect':
       case 'roundedRect':
       case 'circle':
-        return <div style={divStyle} />;
+        return <div style={divStyle}>{shaderCanvas}</div>;
       case 'line':
         return <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', backgroundColor: style.fill || '#000', pointerEvents: 'none' }} />;
       case 'image':
-        return <img src={content} alt="User content" style={{ ...divStyle, objectFit: 'cover', borderWidth: 0 }} draggable={false} />;
+        return sourceShader?<div style={{...divStyle,borderWidth:0}}><img data-pwb-shader-source="media" crossOrigin="anonymous" src={content} alt="User content" style={{width:'100%',height:'100%',objectFit}} draggable={false}/>{shaderCanvas}</div>:<img src={content} alt="User content" style={{ ...divStyle, objectFit, borderWidth: 0 }} draggable={false} />;
       case 'video':
         return (
           <div style={{ ...divStyle, borderWidth: 0 }}>
-            <video src={content} autoPlay={element.videoProps?.autoplay} loop={element.videoProps?.loop} muted className="w-full h-full object-cover" />
+            <video ref={videoRef} data-pwb-shader-source={sourceShader?'media':undefined} crossOrigin={sourceShader?'anonymous':undefined} src={content} autoPlay={shaderDemo||element.videoProps?.autoplay} loop={shaderDemo||element.videoProps?.loop} muted style={{width:'100%',height:'100%',objectFit}} />
+            {sourceShader&&shaderCanvas}
           </div>
         );
       case 'text':
         return (
-          <div style={{ ...divStyle, backgroundColor: 'transparent', borderWidth: 0, display: 'flex', alignItems: 'flex-start', justifyContent: style.textAlign, color: style.color, fontSize: style.fontSize, fontFamily: style.fontFamily, fontWeight: style.fontWeight, fontStyle: style.fontStyle as any, whiteSpace: 'pre-wrap', lineHeight: '1.2' }}>
-            {content}
+          <div style={{ ...divStyle, background: 'transparent', borderWidth: 0, textAlign: style.textAlign, color: style.color, fontSize: style.fontSize, fontFamily: style.fontFamily, fontWeight: style.fontWeight, fontStyle: style.fontStyle as any, whiteSpace: 'pre-wrap', lineHeight: '1.2' }}>
+            <span data-pwb-shader-source={sourceShader?'text':undefined} style={{display:'block',width:'100%',height:'100%',overflowWrap:'anywhere'}}>{content}</span>
+            {sourceShader&&shaderCanvas}
           </div>
         );
       case 'button':
         return (
-          <div style={{ ...divStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', color: style.color, fontSize: style.fontSize, fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'pre-wrap', lineHeight: '1.2' }}>
-            {content}
+          <div style={{ ...divStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', color: style.color, fontSize: style.fontSize, fontFamily: style.fontFamily, fontStyle: style.fontStyle as any, fontWeight: style.fontWeight, cursor: 'pointer', whiteSpace: 'pre-wrap', lineHeight: '1.2' }}>
+            {shaderCanvas}
+            <span style={{position: 'relative'}}>{content}</span>
           </div>
         );
       default: {
         const pathData = getSvgPath(type);
         const isPath = type === 'heart';
+        if(shader)return <div style={svgContainerStyle}>
+          <svg width="0" height="0" aria-hidden="true" style={{position:'absolute'}}><defs><clipPath id={clipId} clipPathUnits="objectBoundingBox">{isPath?<path d={pathData} transform="scale(.01)"/>:<polygon points={pathData} transform="scale(.01)"/>}</clipPath></defs></svg>
+          <div style={{position:'absolute',inset:0,clipPath:`url(#${clipId})`}}>{shaderCanvas}</div>
+          <svg style={{position:'absolute',inset:0,width:'100%',height:'100%'}} viewBox="0 0 100 100" preserveAspectRatio="none">{isPath?<path d={pathData} fill="none" stroke={style.stroke} strokeWidth={style.strokeWidth} vectorEffect="non-scaling-stroke"/>:<polygon points={pathData} fill="none" stroke={style.stroke} strokeWidth={style.strokeWidth} vectorEffect="non-scaling-stroke"/>}</svg>
+        </div>;
         return (
           <svg style={svgContainerStyle} viewBox="0 0 100 100" preserveAspectRatio="none">
             {isPath
-              ? <path d={pathData} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth * (100 / Math.max(width, 1))} vectorEffect="non-scaling-stroke" />
-              : <polygon points={pathData} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth * (100 / Math.max(width, 1))} vectorEffect="non-scaling-stroke" />
+              ? <path d={pathData} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} vectorEffect="non-scaling-stroke" />
+              : <polygon points={pathData} fill={style.fill} stroke={style.stroke} strokeWidth={style.strokeWidth} vectorEffect="non-scaling-stroke" />
             }
           </svg>
         );
@@ -157,9 +166,16 @@ const CanvasElementRendererInner: React.FC<CanvasElementRendererProps> = ({
     />
   );
 
+  let visual = renderContent();
+  if (element.animations?.length) {
+    visual = element.animations!.reduceRight((children, animation, index) => (
+      <div key={animation.id} data-pwb-animation-layer={index} data-pwb-animation-id={animation.id}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>{children}</div>
+    ), visual);
+  }
   return (
     <>
-      {renderContent()}
+      {element.animations?.length?<div ref={animationRef} data-animations={JSON.stringify(element.animations)} style={{position:'absolute',inset:0,pointerEvents:'none'}}>{visual}</div>:visual}
       {element.positionMode === 'fixed' && (
         <div className="absolute top-1 right-1 bg-brand-500 text-white rounded-full p-0.5 shadow-md z-10 pointer-events-none" title="Fixed Position">
           <Pin size={10} />
@@ -185,11 +201,4 @@ const CanvasElementRendererInner: React.FC<CanvasElementRendererProps> = ({
   );
 };
 
-export const CanvasElementRenderer = React.memo(CanvasElementRendererInner, (prev, next) => {
-  if (prev.isEditing !== next.isEditing || prev.isSelected !== next.isSelected || prev.scale !== next.scale) return false;
-  const pe = prev.element, ne = next.element;
-  if (pe.x !== ne.x || pe.y !== ne.y || pe.width !== ne.width || pe.height !== ne.height ||
-      pe.content !== ne.content || pe.type !== ne.type || pe.positionMode !== ne.positionMode ||
-      JSON.stringify(pe.style) !== JSON.stringify(ne.style)) return false;
-  return true;
-});
+export const CanvasElementRenderer = React.memo(CanvasElementRendererInner);

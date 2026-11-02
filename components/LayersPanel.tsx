@@ -1,7 +1,7 @@
 // components/LayersPanel.tsx — Layer management panel using atomic store actions
 
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Eye, EyeOff, Lock, Unlock, Plus, Trash2, GripVertical, X, Sparkles } from 'lucide-react';
 import { t } from '../utils/localization';
 import { useEditorStore } from '../store/useEditorStore';
 
@@ -38,11 +38,11 @@ export const LayersPanel = React.memo(() => {
   };
 
   return (
-    <div className="w-64 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-300 border-l border-gray-300 dark:border-slate-800 flex flex-col h-full shadow-xl z-30 select-none transition-colors">
+    <div className="editor-layers w-64 bg-white dark:bg-slate-900 text-gray-800 dark:text-slate-300 border-l border-gray-300 dark:border-slate-800 flex flex-col h-full shadow-xl z-30 select-none transition-colors">
       {/* Header */}
       <div className="px-3 py-2 bg-gray-50 dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 flex justify-between items-center text-xs font-medium">
         <span>{t('Layers', language)}</span>
-        <button onClick={() => setShowLayers(false)} className="hover:text-black dark:hover:text-white">&times;</button>
+        <button onClick={() => setShowLayers(false)} className="hover:text-black dark:hover:text-white" aria-label={t('Close', language)}><X size={13} /></button>
       </div>
 
       {/* Toolbar */}
@@ -55,6 +55,7 @@ export const LayersPanel = React.memo(() => {
         </button>
       </div>
 
+      <button type="button" className="flex items-center gap-2 px-3 py-2 text-xs text-brand-600 dark:text-brand-400 border-b border-gray-100 dark:border-slate-800" onClick={()=>useEditorStore.setState({showShaderEditor:true,shaderPresetId:null,shaderEditorScope:'layer'})}><Sparkles size={14}/>{language==='ru'?'Шейдер фона слоя':'Layer shader'}</button>
       {/* Layer List */}
       <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900">
         {displayLayers.map((layer, index) => {
@@ -69,6 +70,7 @@ export const LayersPanel = React.memo(() => {
               onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, index)}
+              data-active={isActive || undefined}
               className={`flex items-center px-2 py-1 border-b border-gray-100 dark:border-slate-800 cursor-pointer group transition-colors ${isActive ? 'bg-brand-50 dark:bg-slate-800 text-brand-700 dark:text-brand-300' : 'hover:bg-gray-100 dark:hover:bg-slate-800'}`}
             >
               <div className="mr-1 text-gray-300 dark:text-slate-600 cursor-grab hover:text-gray-500">
@@ -87,7 +89,8 @@ export const LayersPanel = React.memo(() => {
 
               <div className="w-8 h-8 bg-gray-100 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 mr-2 flex items-center justify-center relative overflow-hidden flex-shrink-0">
                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)', backgroundSize: '4px 4px', backgroundPosition: '0 0, 0 2px, 2px -2px, -2px 0px' }} />
-                {layer.elements.length > 0 && <div className="w-4 h-4 bg-gray-400 dark:bg-slate-500 rounded-sm" />}
+                {layer.shader && <Sparkles size={16} className="text-brand-500" />}
+                {!layer.shader && layer.elements.length > 0 && <div className="w-4 h-4 bg-gray-400 dark:bg-slate-500 rounded-sm" />}
               </div>
 
               <div className="flex-1 min-w-0">
